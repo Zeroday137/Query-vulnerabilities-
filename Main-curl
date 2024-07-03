@@ -1,52 +1,143 @@
-#!/bin/bash
-
-# Define your GraphQL endpoint and query
-graphql_endpoint="https://your-api-endpoint.com/graphql"
-
-# Define the GraphQL query for discovery
-query1='{"query":"query { vulnerabilitiesV3(filter: { logicalFilter: { operator: AND filters: [ { logicalFilter: { operator: OR filters: [ { logicalFilter: { operator: AND filters: [ { relationalFilter: { key: API_IS_LEARNT operator: EQUALS value: true } } { relationalFilter: { key: API_DISCOVERY_STATE operator: IN value: [\"DISCOVERED\", \"UNDER_DISCOVERY\"] } } { relationalFilter: { key: SOURCES operator: IN value: [\"VULNERABILITY_SOURCE_TYPE_RUNTIME_PROTECTION\", \"VULNERABILITY_SOURCE_TYPE_GATEWAY_CONFIGURATION\"] } } ] } } { relationalFilter: { key: SOURCES operator: IN value: [\"VULNERABILITY_SOURCE_TYPE_SECURITY_TESTING\"] } } ] } } ] } limit: 10000 offset: 0 ) { results { VULNERABILITY_SUB_CATEGORY: selection(key: VULNERABILITY_SUB_CATEGORY) { value type __typename } DISPLAY_NAME: selection(key: DISPLAY_NAME) { value type __typename } VULNERABILITY_ID: selection(key: VULNERABILITY_ID) { value type __typename } __typename } count total __typename } }"}'
-
-# Function to run the GraphQL query using curl
-run_query() {
-  curl -s -X POST \
-    -H "Content-Type: application/json" \
-    -d "$1" \
-    "$graphql_endpoint"
+query {
+  vulnerabilitiesV3(
+    filter: {
+      logicalFilter: {
+        operator: AND
+        filters: [
+          {
+            logicalFilter: {
+              operator: OR
+              filters: [
+                {
+                  logicalFilter: {
+                    operator: AND
+                    filters: [
+                      {
+                        relationalFilter: {
+                          key: API_IS_LEARNT
+                          operator: EQUALS
+                          value: true
+                        }
+                      }
+                      {
+                        relationalFilter: {
+                          key: API_DISCOVERY_STATE
+                          operator: IN
+                          value: ["DISCOVERED", "UNDER_DISCOVERY"]
+                        }
+                      }
+                      {
+                        relationalFilter: {
+                          key: SOURCES
+                          operator: IN
+                          value: [
+                            "VULNERABILITY_SOURCE_TYPE_RUNTIME_PROTECTION"
+                            "VULNERABILITY_SOURCE_TYPE_GATEWAY_CONFIGURATION"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+                {
+                  relationalFilter: {
+                    key: SOURCES
+                    operator: IN
+                    value: ["VULNERABILITY_SOURCE_TYPE_SECURITY_TESTING"]
+                  }
+                }
+              ]
+            }
+          }
+          {
+            relationalFilter: {
+              key: VULNERABILITY_SUB_CATEGORY
+              operator: IN
+              value: [
+                "SUB_CATEGORY_1",
+                "SUB_CATEGORY_2",
+                "SUB_CATEGORY_3"
+              ]
+            }
+          }
+        ]
+      }
+    }
+    orderBy: { key: LAST_SEEN_TIMESTAMP_MILLIS, direction: DESC }
+    limit: 10000
+    offset: 0
+  ) {
+    results {
+      VULNERABILITY_ID: selection(key: VULNERABILITY_ID) {
+        value
+        type
+        __typename
+      }
+      API_ID: selection(key: API_ID) {
+        value
+        type
+        __typename
+      }
+      VULNERABILITY_CATEGORY: selection(key: VULNERABILITY_CATEGORY) {
+        value
+        type
+        __typename
+      }
+      STATUS: selection(key: STATUS) {
+        value
+        type
+        __typename
+      }
+      AFFECTED_SPAN_PATH: selection(key: AFFECTED_SPAN_PATH) {
+        value
+        type
+        __typename
+      }
+      TEST_IDS: selection(key: TEST_IDS) {
+        value
+        type
+        __typename
+      }
+      LAST_SEEN_TIMESTAMP_MILLIS: selection(key: LAST_SEEN_TIMESTAMP_MILLIS) {
+        value
+        type
+        __typename
+      }
+      CREATED_TIMESTAMP_MILLIS: selection(key: CREATED_TIMESTAMP_MILLIS) {
+        value
+        type
+        __typename
+      }
+      CLOSED_TIMESTAMP_MILLIS: selection(key: CLOSED_TIMESTAMP_MILLIS) {
+        value
+        type
+        __typename
+      }
+      SOURCES: selection(key: SOURCES) {
+        value
+        type
+        __typename
+      }
+      LACK_OF_ENCRYPTION_EVIDENCE_FIELD_SPAN_ID: selection(
+        key: LACK_OF_ENCRYPTION_EVIDENCE_FIELD_SPAN_ID
+      ) {
+        value
+        type
+        __typename
+      }
+      entity(type: "API") {
+        id
+        name: attribute(expression: { key: "name" })
+        riskScore: attribute(expression: { key: "riskScore" })
+        riskScoreCategory: attribute(expression: { key: "riskScoreCategory" })
+        serviceId: attribute(expression: { key: "serviceId" })
+        serviceName: attribute(expression: { key: "serviceName" })
+        __typename
+      }
+      __typename
+    }
+    count
+    total
+    __typename
+  }
 }
-
-# Run the first query in the Discover script section
-result1=$(run_query "$query1")
-
-# Extract subcategories directly without jq (if possible, adjust based on response structure)
-subcategories=$(echo "$result1" | grep -oP '(?<="VULNERABILITY_SUB_CATEGORY":\{"value":")[^"]+')
-
-# Output each subcategory as a separate line (required for Cribl Discover script)
-echo "$subcategories"
-
-
-
-
-
-
-
-#!/bin/bash
-
-# Define your GraphQL endpoint and query
-graphql_endpoint="https://your-api-endpoint.com/graphql"
-
-# Function to run the GraphQL query for each subcategory
-run_second_query() {
-  subcategory="$1"
-  query2='{"query":"query { vulnerabilitiesV32: vulnerabilitiesV3(filter: { logicalFilter: { operator: AND filters: [ { logicalFilter: { operator: OR filters: [ { logicalFilter: { operator: AND filters: [ { relationalFilter: { key: API_IS_LEARNT operator: EQUALS value: true } } { relationalFilter: { key: API_DISCOVERY_STATE operator: IN value: [\"DISCOVERED\", \"UNDER_DISCOVERY\"] } } { relationalFilter: { key: SOURCES operator: IN value: [\"VULNERABILITY_SOURCE_TYPE_RUNTIME_PROTECTION\", \"VULNERABILITY_SOURCE_TYPE_GATEWAY_CONFIGURATION\"] } } ] } } { relationalFilter: { key: SOURCES operator: IN value: [\"VULNERABILITY_SOURCE_TYPE_SECURITY_TESTING\"] } } ] } } { relationalFilter: { key: VULNERABILITY_SUB_CATEGORY operator: EQUALS value: \"'$subcategory'\" } } ] } orderBy: { key: LAST_SEEN_TIMESTAMP_MILLIS, direction: DESC } limit: 10000 offset: 0 ) { results { VULNERABILITY_ID: selection(key: VULNERABILITY_ID) { value type __typename } API_ID: selection(key: API_ID) { value type __typename } VULNERABILITY_CATEGORY: selection(key: VULNERABILITY_CATEGORY) { value type __typename } STATUS: selection(key: STATUS) { value type __typename } AFFECTED_SPAN_PATH: selection(key: AFFECTED_SPAN_PATH) { value type __typename } TEST_IDS: selection(key: TEST_IDS) { value type __typename } LAST_SEEN_TIMESTAMP_MILLIS: selection(key: LAST_SEEN_TIMESTAMP_MILLIS) { value type __typename } CREATED_TIMESTAMP_MILLIS: selection(key: CREATED_TIMESTAMP_MILLIS) { value type __typename } CLOSED_TIMESTAMP_MILLIS: selection(key: CLOSED_TIMESTAMP_MILLIS) { value type __typename } SOURCES: selection(key: SOURCES) { value type __typename } LACK_OF_ENCRYPTION_EVIDENCE_FIELD_SPAN_ID: selection(key: LACK_OF_ENCRYPTION_EVIDENCE_FIELD_SPAN_ID) { value type __typename } entity(type: \"API\") { id name: attribute(expression: { key: \"name\" }) riskScore: attribute(expression: { key: \"riskScore\" }) riskScoreCategory: attribute(expression: { key: \"riskScoreCategory\" }) serviceId: attribute(expression: { key: \"serviceId\" }) serviceName: attribute(expression: { key: \"serviceName\" }) __typename } __typename } count total __typename } }"}'
-  
-  curl -s -X POST \
-    -H "Content-Type: application/json" \
-    -d "$query2" \
-    "$graphql_endpoint"
-}
-
-# Read subcategories from standard input (provided by Cribl)
-while IFS= read -r subcategory; do
-  # Run the second query for each subcategory in the Collect script section
-  run_second_query "$subcategory"
-done
