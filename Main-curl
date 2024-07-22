@@ -1,284 +1,108 @@
-const request = require('request-promise');
-
-// Define the discover function
-async function discover(logger) {
-    // No specific discovery logic is required in this case
-    // Returning a static list with one item as the source
-    return [{name: "GraphQLSource"}];
-}
-
-// Define the collect function
-async function collect(logger, source) {
-    const url = 'https://your-graphql-endpoint';
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer YOUR_API_TOKEN'
-    };
-
-    const firstQuery = `
-    {
-      vulnerabilitiesV3(
-        filter: {
-          logicalFilter: {
-            operator: AND
-            filters: [
-              {
-                logicalFilter: {
-                  operator: OR
-                  filters: [
-                    {
-                      logicalFilter: {
-                        operator: AND
-                        filters: [
-                          {
-                            relationalFilter: {
-                              key: API_IS_LEARNT
-                              operator: EQUALS
-                              value: true
-                            }
-                          }
-                          {
-                            relationalFilter: {
-                              key: API_DISCOVERY_STATE
-                              operator: IN
-                              value: ["DISCOVERED", "UNDER_DISCOVERY"]
-                            }
-                          }
-                          {
-                            relationalFilter: {
-                              key: SOURCES
-                              operator: IN
-                              value: [
-                                "VULNERABILITY_SOURCE_TYPE_RUNTIME_PROTECTION"
-                                "VULNERABILITY_SOURCE_TYPE_GATEWAY_CONFIGURATION"
-                              ]
-                            }
-                          }
-                        ]
-                      }
-                    }
-                    {
-                      relationalFilter: {
-                        key: SOURCES
-                        operator: IN
-                        value: ["VULNERABILITY_SOURCE_TYPE_SECURITY_TESTING"]
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
+query {
+  anomalydetectionruleconfigs(
+    AnomalyScope: {
+      ScopeType: ENVIRONMENT
+      environmentScope: {id: " "}
+    }
+  ) {
+    total
+    results {
+      hidden
+      ruleId
+      ruleName
+      eventLabels {
+        labelKey
+        labelValue
+      }
+      eventDetails {
+        description
+        impact
+        mitigation
+        references
+      }
+      subRuleConfigs {
+        subRuleId
+        subRuleName
+        subRuleTypes
+        eventLabels {
+          labelKey
+          labelValue
         }
-        limit: 10000
-        offset: 0
-      ) {
-        results {
-          VULNERABILITY_SUB_CATEGORY: selection(key: VULNERABILITY_SUB_CATEGORY) {
-            value
-            type
-            __typename
-          }
-          DISPLAY_NAME: selection(key: DISPLAY_NAME) {
-            value
-            type
-            __typename
-          }
-          VULNERABILITY_ID: selection(key: VULNERABILITY_ID) {
-            value
-            type
-            __typename
-          }
-          __typename
+        eventDetails {
+          description
+          impact
+          mitigation
+          references
         }
-        count
-        total
-        __typename
       }
     }
-    `;
+  }
 
-    try {
-        const firstResponse = await request.post({
-            url: url,
-            headers: headers,
-            body: JSON.stringify({ query: firstQuery }),
-            json: true
-        });
-
-        const subCategoryValues = firstResponse.data.vulnerabilitiesV3.results.map(item => item.VULNERABILITY_SUB_CATEGORY.value);
-
-        const secondQuery = `
-        query {
-          vulnerabilitiesV32: vulnerabilitiesV3(
-            filter: {
-              logicalFilter: {
-                operator: AND
-                filters: [
-                  {
-                    logicalFilter: {
-                      operator: OR
-                      filters: [
-                        {
-                          logicalFilter: {
-                            operator: AND
-                            filters: [
-                              {
-                                relationalFilter: {
-                                  key: API_IS_LEARNT
-                                  operator: EQUALS
-                                  value: true
-                                }
-                              }
-                              {
-                                relationalFilter: {
-                                  key: API_DISCOVERY_STATE
-                                  operator: IN
-                                  value: ["DISCOVERED", "UNDER_DISCOVERY"]
-                                }
-                              }
-                              {
-                                relationalFilter: {
-                                  key: SOURCES
-                                  operator: IN
-                                  value: [
-                                    "VULNERABILITY_SOURCE_TYPE_RUNTIME_PROTECTION"
-                                    "VULNERABILITY_SOURCE_TYPE_GATEWAY_CONFIGURATION"
-                                  ]
-                                }
-                              }
-                            ]
-                          }
-                        }
-                        {
-                          relationalFilter: {
-                            key: SOURCES
-                            operator: IN
-                            value: ["VULNERABILITY_SOURCE_TYPE_SECURITY_TESTING"]
-                          }
-                        }
-                      ]
-                    }
-                  }
-                  {
-                    relationalFilter: {
-                      key: VULNERABILITY_SUB_CATEGORY
-                      operator: IN
-                      value: ${JSON.stringify(subCategoryValues)}
-                    }
-                  }
-                ]
-              }
-            }
-            orderBy: { key: LAST_SEEN_TIMESTAMP_MILLIS, direction: DESC }
-            limit: 10000
-            offset: 0
-          ) {
-            results {
-              VULNERABILITY_ID: selection(key: VULNERABILITY_ID) {
-                value
-                type
-                __typename
-              }
-              API_ID: selection(key: API_ID) {
-                value
-                type
-                __typename
-              }
-              VULNERABILITY_CATEGORY: selection(key: VULNERABILITY_CATEGORY) {
-                value
-                type
-                __typename
-              }
-              STATUS: selection(key: STATUS) {
-                value
-                type
-                __typename
-              }
-              AFFECTED_SPAN_PATH: selection(key: AFFECTED_SPAN_PATH) {
-                value
-                type
-                __typename
-              }
-              TEST_IDS: selection(key: TEST_IDS) {
-                value
-                type
-                __typename
-              }
-              LAST_SEEN_TIMESTAMP_MILLIS: selection(key: LAST_SEEN_TIMESTAMP_MILLIS) {
-                value
-                type
-                __typename
-              }
-              CREATED_TIMESTAMP_MILLIS: selection(key: CREATED_TIMESTAMP_MILLIS) {
-                value
-                type
-                __typename
-              }
-              CLOSED_TIMESTAMP_MILLIS: selection(key: CLOSED_TIMESTAMP_MILLIS) {
-                value
-                type
-                __typename
-              }
-              SOURCES: selection(key: SOURCES) {
-                value
-                type
-                __typename
-              }
-              LACK_OF_ENCRYPTION_EVIDENCE_FIELD_SPAN_ID: selection(
-                key: LACK_OF_ENCRYPTION_EVIDENCE_FIELD_SPAN_ID
-              ) {
-                value
-                type
-                __typename
-              }
-              entity(type: "API") {
-                id
-                name: attribute(expression: { key: "name" })
-                riskScore: attribute(expression: { key: "riskScore" })
-                riskScoreCategory: attribute(expression: { key: "riskScoreCategory" })
-                serviceId: attribute(expression: { key: "serviceId" })
-                serviceName: attribute(expression: { key: "serviceName" })
-                __typename
-              }
-              __typename
-            }
-            count
-            total
-            __typename
-          }
-        }
-        `;
-
-        const secondResponse = await request.post({
-            url: url,
-            headers: headers,
-            body: JSON.stringify({ query: secondQuery }),
-            json: true
-        });
-
-        const events = secondResponse.data.vulnerabilitiesV32.results.map(result => {
-            return {
-                VULNERABILITY_ID: result.VULNERABILITY_ID.value,
-                API_ID: result.API_ID.value,
-                VULNERABILITY_CATEGORY: result.VULNERABILITY_CATEGORY.value,
-                STATUS: result.STATUS.value,
-                AFFECTED_SPAN_PATH: result.AFFECTED_SPAN_PATH.value,
-                TEST_IDS: result.TEST_IDS.value,
-                LAST_SEEN_TIMESTAMP_MILLIS: result.LAST_SEEN_TIMESTAMP_MILLIS.value,
-                CREATED_TIMESTAMP_MILLIS: result.CREATED_TIMESTAMP_MILLIS.value,
-                CLOSED_TIMESTAMP_MILLIS: result.CLOSED_TIMESTAMP_MILLIS.value,
-                SOURCES: result.SOURCES.value,
-                LACK_OF_ENCRYPTION_EVIDENCE_FIELD_SPAN_ID: result.LACK_OF_ENCRYPTION_EVIDENCE_FIELD_SPAN_ID.value,
-                entity: result.entity
-            };
-        });
-
-        return events;
-    } catch (error) {
-        logger.error(`Error executing queries: ${error}`);
-        return [];
+  events(
+    between: {
+      startTime: "0000-01-31T11:29:08.344Z"
+      endTime: "0000-02-31T11:29:08.344Z"
     }
+    offset: 0
+    filterBy: [
+      {
+        keyExpression: { key: "threatCategory" }
+        operator: NOT_IN
+        value: ["Null"]
+        type: ATTRIBUTE
+      }
+    ]
+  ) {
+    results {
+      id
+      name: attribute(expression: { key: "name" })
+      timestamp: attribute(expression: { key: "timestamp" })
+      type: attribute(expression: { key: "type" })
+      environment: attribute(expression: { key: "environment" })
+      spanId: attribute(expression: { key: "spanId" })
+      apiId: attribute(expression: { key: "apiId" })
+      apiName: attribute(expression: { key: "apiName" })
+      apiUri: attribute(expression: { key: "apiUri" })
+      category: attribute(expression: { key: "category" })
+      serviceId: attribute(expression: { key: "serviceId" })
+      serviceName: attribute(expression: { key: "serviceName" })
+      eventDescription: attribute(expression: { key: "eventDescription" })
+      actorEntityId: attribute(expression: { key: "actorEntityId" })
+      actorName: attribute(expression: { key: "actorName" })
+      actorIpAddress: attribute(expression: { key: "actorIpAddress" })
+      actorDevice: attribute(expression: { key: "actorDevice" })
+      actorSession: attribute(expression: { key: "actorSession" })
+      securityScore: attribute(expression: { key: "securityScore" })
+      securityScoreCategory: attribute(expression: { key: "securityScoreCategory" })
+      securityEventCategory: attribute(expression: { key: "securityEventCategory" })
+      threatCategory: attribute(expression: { key: "threatCategory" })
+      securityEventTypeId: attribute(expression: { key: "securityEventTypeId" })
+      spanStartTimestamp: attribute(expression: { key: "spanStartTimestamp" })
+      actorCountry: attribute(expression: { key: "actorCountry" })
+      actorState: attribute(expression: { key: "actorState" })
+      actorCity: attribute(expression: { key: "actorCity" })
+      eventImpactLevel: attribute(expression: { key: "eventImpactLevel" })
+      eventConfidenceLevel: attribute(expression: { key: "eventConfidenceLevel" })
+      ipCategories: attribute(expression: { key: "ipCategories" })
+      ipReputationLevel: attribute(expression: { key: "ipReputationLevel" })
+      ipConnectionType: attribute(expression: { key: "ipConnectionType" })
+      ipAsn: attribute(expression: { key: "ipAsn" })
+      ipOrganisation: attribute(expression: { key: "ipOrganisation" })
+      traceId: attribute(expression: { key: "traceId" })
+      anomalousAttribute: attribute(expression: { key: "anomalousAttribute" })
+      scannerType: attribute(expression: { key: "scannerType" })
+      SERVICE: entity(type: "SERVICE") {
+        id: attribute(expression: { key: "id" })
+        name: attribute(expression: { key: "name" })
+      }
+      API: entity(type: "API") {
+        id: attribute(expression: { key: "id" })
+        name: attribute(expression: { key: "name" })
+        isAuthenticated: attribute(expression: { key: "isAuthenticated" })
+        hasPii: attribute(expression: { key: "hasPii" })
+        changeLabel: attribute(expression: { key: "changeLabel" })
+        changeLabelTimestamp: attribute(expression: { key: "changeLabelTimestamp" })
+      }
+    }
+  }
 }
-
-module.exports = { discover, collect };
